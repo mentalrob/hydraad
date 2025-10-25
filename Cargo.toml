@@ -26,3 +26,4 @@ ntlm-hash = "0.1.0"
 himmelblau_kerberos_ccache = "0.4.1"
 base64 = "0.22.1"
 himmelblau_kerberos_constants = "0.4.1"
+smb = { git = "https://github.com/afiffon/smb-rs.git", branch = "136-bug-cant-build-on-windows"}
