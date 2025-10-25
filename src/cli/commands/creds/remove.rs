@@ -35,7 +35,6 @@ impl Command for RemoveArgs {
                     println!("Are you sure you want to remove credential:");
                     println!("  ID: {}", credential.id);
                     println!("  Username: {}", credential.username);
-                    println!("  Domain: {}", credential.domain);
                     println!("  Type: {:?}", credential.credential_type);
                     println!("  Source: {}", credential.source);
                     println!();
@@ -57,7 +56,7 @@ impl Command for RemoveArgs {
             _ => {
                 println!("Multiple credentials match '{}'. Please be more specific:", self.credential_id);
                 for cred in matching_credentials {
-                    println!("  {} - {}@{} ({})", cred.id, cred.username, cred.domain, cred.source);
+                    println!("  {} - {} ({})", cred.id, cred.username, cred.source);
                 }
                 Ok(false)
             }

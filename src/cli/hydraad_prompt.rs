@@ -5,6 +5,7 @@ use reedline::{Prompt, PromptHistorySearchStatus};
 
 pub struct HydraAdPrompt {
     dc_name: Option<String>,
+    creds_name: Option<String>,
     
 }
 
@@ -12,21 +13,30 @@ impl HydraAdPrompt {
     pub fn new() -> Self {
         Self {
             dc_name: None,
+            creds_name: None,
         }
     }
     
     pub fn set_dc_name(&mut self, dc_name: Option<String>) {
         self.dc_name = dc_name;
     }
+
+    pub fn set_credential_name(&mut self, creds_name: Option<String>) {
+        self.creds_name = creds_name;
+    }
 }
 
 impl Prompt for HydraAdPrompt {
     fn render_prompt_left(&self) -> std::borrow::Cow<'_, str> {
-        let prompt_left = if let Some(dc_name) = &self.dc_name {
-            format!("{}{}{} {} ", "[".bright_white(), dc_name.yellow(), "]".bright_white(), "hydraad".bright_white())
-        } else {
-            format!("{} ","hydraad".bright_white())
-        };
+        let mut prefix = String::new();
+        if let Some(creds_name) = &self.creds_name {
+            prefix.push_str(&format!("{}{}{} ", "[".bright_white(), creds_name.yellow(), "]".bright_white()));
+        }
+        if let Some(dc_name) = &self.dc_name {
+            prefix.push_str(&format!("{}{}{} ", "[".bright_white(), dc_name.yellow(), "]".bright_white()));
+        }
+
+        let prompt_left = format!("{}{} ", prefix, "hydraad".bright_white());
         Cow::Owned(prompt_left)
     }
 

@@ -2,15 +2,12 @@ use clap::{Args, ValueEnum};
 use log::info;
 use winston::log;
 
-use crate::{app::App, cli::commands::Command, data::{AuthData, Credential, CredentialType}};
+use crate::{app::App, cli::commands::Command, data::{credential::{AuthType, CredType}, AuthData, Credential}};
 
 #[derive(Debug, Args)]
 pub struct AddArgs {
     /// Username (can be UPN, SAM, or DN format)
     pub username: String,
-    
-    /// Domain name
-    pub domain: String,
     
     /// Authentication type
     #[arg(short, long, value_enum, default_value_t = AuthType::Password)]
@@ -32,46 +29,7 @@ pub struct AddArgs {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, ValueEnum)]
-pub enum AuthType {
-    Password,
-    NtlmHash,
-    LmHash,
-    Token,
-}
 
-#[derive(Debug, Clone, ValueEnum)]
-pub enum CredType {
-    DomainUser,
-    LocalAdmin,
-    DomainAdmin,
-    EnterpriseAdmin,
-    ServiceAccount,
-    MachineAccount,
-    ManagedServiceAccount,
-    GroupManagedServiceAccount,
-    ServicePrincipal,
-    BuiltIn,
-    Unknown,
-}
-
-impl From<CredType> for CredentialType {
-    fn from(cred_type: CredType) -> Self {
-        match cred_type {
-            CredType::DomainUser => CredentialType::DomainUser,
-            CredType::LocalAdmin => CredentialType::LocalAdmin,
-            CredType::DomainAdmin => CredentialType::DomainAdmin,
-            CredType::EnterpriseAdmin => CredentialType::EnterpriseAdmin,
-            CredType::ServiceAccount => CredentialType::ServiceAccount,
-            CredType::MachineAccount => CredentialType::MachineAccount,
-            CredType::ManagedServiceAccount => CredentialType::ManagedServiceAccount,
-            CredType::GroupManagedServiceAccount => CredentialType::GroupManagedServiceAccount,
-            CredType::ServicePrincipal => CredentialType::ServicePrincipal,
-            CredType::BuiltIn => CredentialType::BuiltIn,
-            CredType::Unknown => CredentialType::Unknown,
-        }
-    }
-}
 
 impl Command for AddArgs {
     async fn execute(&self, app: &mut App) -> Result<bool, String> {
@@ -80,14 +38,13 @@ impl Command for AddArgs {
             AuthType::Password => AuthData::Password(self.auth_data.clone()),
             AuthType::NtlmHash => AuthData::NtlmHash(self.auth_data.clone()),
             AuthType::LmHash => AuthData::LmHash(self.auth_data.clone()),
-            AuthType::Token => AuthData::Token(self.auth_data.clone()),
+            AuthType::Tgt => AuthData::KerberosTicket(self.auth_data.clone()),
         };
         
         // Create the credential
         let credential = Credential {
             id: uuid::Uuid::new_v4().to_string(),
             username: self.username.clone(),
-            domain: self.domain.clone(),
             auth_data,
             credential_type: self.cred_type.clone().into(),
             privileges: Vec::new(),
@@ -103,7 +60,7 @@ impl Command for AddArgs {
         // Add the credential to storage
         match app.credential_storage().add_credential(credential) {
             Ok(id) => {
-                log!(info, "Credential added successfully", credential_id = id);
+                println!("Credential added successfully");
                 Ok(false)
             }
             Err(e) => Err(format!("Failed to add credential: {}", e))

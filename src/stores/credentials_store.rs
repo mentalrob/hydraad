@@ -2,15 +2,12 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
-use crate::data::{Credential, CredentialType, CredentialStatus, AuthData};
+use crate::data::{credential::AuthType, AuthData, Credential, CredentialStatus, CredentialType};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CredentialsStore {
     /// Map of credential ID to credential
     credentials: HashMap<String, Credential>,
-    
-    /// Index by domain for quick lookups
-    domain_index: HashMap<String, Vec<String>>,
     
     /// Index by username for quick lookups
     username_index: HashMap<String, Vec<String>>,
@@ -34,11 +31,12 @@ pub struct CredentialStats {
     pub by_source: HashMap<String, usize>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct CredentialFilter {
     pub domain: Option<String>,
     pub username: Option<String>,
     pub credential_type: Option<CredentialType>,
+    pub auth_type: Option<AuthType>,
     pub source: Option<String>,
     pub validated_only: bool,
     pub has_privileges: Option<Vec<String>>,
@@ -55,7 +53,6 @@ impl CredentialsStore {
     pub fn new() -> Self {
         Self {
             credentials: HashMap::new(),
-            domain_index: HashMap::new(),
             username_index: HashMap::new(),
             type_index: HashMap::new(),
             source_index: HashMap::new(),
@@ -73,7 +70,6 @@ impl CredentialsStore {
         }
         
         // Update indices
-        self.add_to_domain_index(&credential.domain, &id);
         self.add_to_username_index(&credential.username, &id);
         self.add_to_type_index(&credential.credential_type, &id);
         self.add_to_source_index(&credential.source, &id);
@@ -101,7 +97,6 @@ impl CredentialsStore {
     pub fn remove_credential(&mut self, id: &str) -> Option<Credential> {
         if let Some(credential) = self.credentials.remove(id) {
             // Remove from indices
-            self.remove_from_domain_index(&credential.domain, id);
             self.remove_from_username_index(&credential.username, id);
             self.remove_from_type_index(&credential.credential_type, id);
             self.remove_from_source_index(&credential.source, id);
@@ -123,14 +118,12 @@ impl CredentialsStore {
         
         // Remove old credential from indices
         if let Some(old_credential) = self.credentials.get_mut(id).cloned() {
-            self.remove_from_domain_index(&old_credential.domain, id);
             self.remove_from_username_index(&old_credential.username, id);
             self.remove_from_type_index(&old_credential.credential_type, id);
             self.remove_from_source_index(&old_credential.source, id);
         }
         
         // Add new credential to indices
-        self.add_to_domain_index(&updated_credential.domain, id);
         self.add_to_username_index(&updated_credential.username, id);
         self.add_to_type_index(&updated_credential.credential_type, id);
         self.add_to_source_index(&updated_credential.source, id);
@@ -145,21 +138,11 @@ impl CredentialsStore {
     }
     
     /// Get all credentials
-    pub fn get_all_credentials(&self) -> Vec<&Credential> {
-        self.credentials.values().collect()
+    pub fn get_all_credentials(&self) -> Vec<Credential> {
+        self.credentials.values().cloned().collect()
     }
     
-    /// Get credentials by domain
-    pub fn get_credentials_by_domain(&self, domain: &str) -> Vec<&Credential> {
-        self.domain_index
-            .get(domain)
-            .map(|ids| {
-                ids.iter()
-                    .filter_map(|id| self.credentials.get(id))
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
+   
     
     /// Get credentials by username
     pub fn get_credentials_by_username(&self, username: &str) -> Vec<&Credential> {
@@ -198,22 +181,25 @@ impl CredentialsStore {
     }
     
     /// Filter credentials based on criteria
-    pub fn filter_credentials(&self, filter: &CredentialFilter) -> Vec<&Credential> {
+    pub fn filter_credentials(&self, filter: &CredentialFilter) -> Vec<Credential> {
         self.credentials
             .values()
+            .cloned()
             .filter(|cred| {
-                // Domain filter
-                if let Some(ref domain) = filter.domain {
-                    if !cred.domain.eq_ignore_ascii_case(domain) {
-                        return false;
-                    }
-                }
-                
                 // Username filter
                 if let Some(ref username) = filter.username {
                     if !cred.username.eq_ignore_ascii_case(username) {
                         return false;
                     }
+                }
+
+                if let Some(ref auth_type) = filter.auth_type {
+                    return match auth_type {
+                        AuthType::Password => matches!(cred.auth_data, AuthData::Password(_)),
+                        AuthType::NtlmHash => matches!(cred.auth_data, AuthData::NtlmHash(_)),
+                        AuthType::LmHash => matches!(cred.auth_data, AuthData::LmHash(_)),
+                        AuthType::Tgt => matches!(cred.auth_data, AuthData::KerberosTicket(_)),
+                    };
                 }
                 
                 // Type filter
@@ -272,7 +258,6 @@ impl CredentialsStore {
             .values()
             .filter(|cred| {
                 cred.username.to_lowercase().contains(&query_lower)
-                    || cred.domain.to_lowercase().contains(&query_lower)
                     || cred.source.to_lowercase().contains(&query_lower)
                     || cred.notes.as_ref().map_or(false, |n| n.to_lowercase().contains(&query_lower))
             })
@@ -318,7 +303,6 @@ impl CredentialsStore {
     /// Clear all credentials
     pub fn clear(&mut self) {
         self.credentials.clear();
-        self.domain_index.clear();
         self.username_index.clear();
         self.type_index.clear();
         self.source_index.clear();
@@ -351,10 +335,9 @@ impl CredentialsStore {
             let discovered_at = credential.discovered_at.format("%Y-%m-%d %H:%M:%S UTC");
             
             csv.push_str(&format!(
-                "{},{},{},{:?},{},{},{},{},{}\n",
+                "{},{},{:?},{},{},{},{},{}\n",
                 credential.id,
                 credential.username,
-                credential.domain,
                 credential.credential_type,
                 credential.source,
                 credential.is_validated,
@@ -367,14 +350,7 @@ impl CredentialsStore {
         csv
     }
     
-    // Private helper methods for index management
-    fn add_to_domain_index(&mut self, domain: &str, id: &str) {
-        self.domain_index
-            .entry(domain.to_lowercase())
-            .or_insert_with(Vec::new)
-            .push(id.to_string());
-    }
-    
+  
     fn add_to_username_index(&mut self, username: &str, id: &str) {
         self.username_index
             .entry(username.to_lowercase())
@@ -396,14 +372,7 @@ impl CredentialsStore {
             .push(id.to_string());
     }
     
-    fn remove_from_domain_index(&mut self, domain: &str, id: &str) {
-        if let Some(ids) = self.domain_index.get_mut(&domain.to_lowercase()) {
-            ids.retain(|x| x != id);
-            if ids.is_empty() {
-                self.domain_index.remove(&domain.to_lowercase());
-            }
-        }
-    }
+  
     
     fn remove_from_username_index(&mut self, username: &str, id: &str) {
         if let Some(ids) = self.username_index.get_mut(&username.to_lowercase()) {
@@ -444,7 +413,6 @@ impl CredentialsStore {
         // Recalculate stats
         for credential in self.credentials.values() {
             *self.stats.by_type.entry(credential.credential_type.clone()).or_insert(0) += 1;
-            *self.stats.by_domain.entry(credential.domain.clone()).or_insert(0) += 1;
             *self.stats.by_source.entry(credential.source.clone()).or_insert(0) += 1;
         }
     }

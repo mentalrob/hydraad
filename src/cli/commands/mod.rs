@@ -3,11 +3,12 @@ mod exit;
 mod clear;
 mod dc;
 mod creds;
+mod kerberos;
 
 use std::future::Future;
 use clap::{command, Parser, Subcommand};
 
-use crate::{app::App, cli::commands::{clear::ClearArgs, creds::CredsArgs, dc::DcArgs, exit::ExitArgs}};
+use crate::{app::App, cli::commands::{clear::ClearArgs, creds::CredsArgs, dc::DcArgs, exit::ExitArgs, kerberos::KerberosArgs}};
 
 macro_rules! handle_commands {
     ($command:expr, $app:expr, $($variant:ident),*) => {
@@ -34,7 +35,8 @@ impl Cli {
             Exit,
             Clear,
             Dc,
-            Creds
+            Creds,
+            Kerberos
         )
     }
 }
@@ -53,4 +55,7 @@ pub enum Commands {
     Dc(DcArgs),
     #[command(about = "Credential Management Operations")]
     Creds(CredsArgs),
+
+    #[command(about = "Kerberos Operations")]
+    Kerberos(KerberosArgs),
 }

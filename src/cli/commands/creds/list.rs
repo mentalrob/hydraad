@@ -30,6 +30,7 @@ impl Command for ListArgs {
                 domain: self.domain.clone(),
                 username: self.username.clone(),
                 credential_type: None,
+                auth_type: None,
                 source: self.source.clone(),
                 validated_only: self.validated_only,
                 has_privileges: None,
@@ -51,7 +52,6 @@ impl Command for ListArgs {
             .set_header(vec![
                 Cell::new("ID").add_attribute(Attribute::Bold).fg(Color::Cyan),
                 Cell::new("Username").add_attribute(Attribute::Bold).fg(Color::Cyan),
-                Cell::new("Domain").add_attribute(Attribute::Bold).fg(Color::Cyan),
                 Cell::new("Type").add_attribute(Attribute::Bold).fg(Color::Cyan),
                 Cell::new("Auth Type").add_attribute(Attribute::Bold).fg(Color::Cyan),
                 Cell::new("Source").add_attribute(Attribute::Bold).fg(Color::Cyan),
@@ -80,7 +80,6 @@ impl Command for ListArgs {
             table.add_row(vec![
                 Cell::new(short_id),
                 Cell::new(&cred.username),
-                Cell::new(&cred.domain),
                 Cell::new(format!("{:?}", cred.credential_type)),
                 Cell::new(cred.auth_data_type()),
                 Cell::new(&cred.source),

@@ -1,6 +1,49 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
+use clap::ValueEnum;
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum AuthType {
+    Password,
+    NtlmHash,
+    LmHash,
+    Tgt,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum CredType {
+    DomainUser,
+    LocalAdmin,
+    DomainAdmin,
+    EnterpriseAdmin,
+    ServiceAccount,
+    MachineAccount,
+    ManagedServiceAccount,
+    GroupManagedServiceAccount,
+    ServicePrincipal,
+    BuiltIn,
+    Unknown,
+}
+
+impl From<CredType> for CredentialType {
+    fn from(cred_type: CredType) -> Self {
+        match cred_type {
+            CredType::DomainUser => CredentialType::DomainUser,
+            CredType::LocalAdmin => CredentialType::LocalAdmin,
+            CredType::DomainAdmin => CredentialType::DomainAdmin,
+            CredType::EnterpriseAdmin => CredentialType::EnterpriseAdmin,
+            CredType::ServiceAccount => CredentialType::ServiceAccount,
+            CredType::MachineAccount => CredentialType::MachineAccount,
+            CredType::ManagedServiceAccount => CredentialType::ManagedServiceAccount,
+            CredType::GroupManagedServiceAccount => CredentialType::GroupManagedServiceAccount,
+            CredType::ServicePrincipal => CredentialType::ServicePrincipal,
+            CredType::BuiltIn => CredentialType::BuiltIn,
+            CredType::Unknown => CredentialType::Unknown,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Credential {
     /// Unique identifier for this credential
@@ -8,9 +51,6 @@ pub struct Credential {
     
     /// Username (can be UPN, SAM, or DN format)
     pub username: String,
-    
-    /// Domain name
-    pub domain: String,
     
     /// Authentication data
     pub auth_data: AuthData,
@@ -139,14 +179,12 @@ impl Credential {
     /// Create a new credential with password authentication
     pub fn new_password(
         username: String,
-        domain: String,
         password: String,
         source: String,
     ) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             username,
-            domain,
             auth_data: AuthData::Password(password),
             credential_type: CredentialType::Unknown,
             privileges: Vec::new(),
@@ -163,14 +201,12 @@ impl Credential {
     /// Create a new credential with NTLM hash
     pub fn new_ntlm_hash(
         username: String,
-        domain: String,
         ntlm_hash: String,
         source: String,
     ) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             username,
-            domain,
             auth_data: AuthData::NtlmHash(ntlm_hash),
             credential_type: CredentialType::Unknown,
             privileges: Vec::new(),
@@ -185,20 +221,20 @@ impl Credential {
     }
     
     /// Get the full username in UPN format if possible
-    pub fn upn(&self) -> String {
+    pub fn upn(&self, domain: &String) -> String {
         if self.username.contains('@') {
             self.username.clone()
         } else {
-            format!("{}@{}", self.username, self.domain)
+            format!("{}@{}", self.username, domain)
         }
     }
     
     /// Get the username in DOMAIN\\username format
-    pub fn domain_username(&self) -> String {
+    pub fn domain_username(&self, domain: &String) -> String {
         if self.username.contains('\\') {
             self.username.clone()
         } else {
-            format!("{}\\{}", self.domain, self.username)
+            format!("{}\\{}", domain, self.username)
         }
     }
     
@@ -244,16 +280,16 @@ impl Credential {
     }
     
     /// Get a safe representation of the auth data type (without sensitive data)
-    pub fn auth_data_type(&self) -> &'static str {
+    pub fn auth_data_type(&self) -> String {
         match &self.auth_data {
-            AuthData::Password(_) => "Password",
-            AuthData::NtlmHash(_) => "NTLM Hash",
-            AuthData::LmHash(_) => "LM Hash",
-            AuthData::LmNtlm { .. } => "LM/NTLM Hash",
-            AuthData::KerberosTicket(_) => "Kerberos Ticket",
-            AuthData::Certificate { .. } => "Certificate",
-            AuthData::Token(_) => "Token",
-            AuthData::Custom(_) => "Custom",
+            AuthData::Password(p) => format!("{}", p),
+            AuthData::NtlmHash(n) => format!("{}", n),
+            AuthData::LmHash(l) => format!("{}", l),
+            AuthData::LmNtlm { .. } => "LM/NTLM Hash".to_string(),
+            AuthData::KerberosTicket(_) => "Kerberos Ticket".to_string(),
+            AuthData::Certificate { .. } => "Certificate".to_string(),
+            AuthData::Token(_) => "Token".to_string(),
+            AuthData::Custom(_) => "Custom".to_string(),
         }
     }
 }

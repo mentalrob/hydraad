@@ -19,3 +19,10 @@ tokio = { version = "1.48.0", features = ["rt", "macros", "rt-multi-thread"] }
 uuid = { version = "1.18.1", features = ["v4"] }
 winston = "0.7.1"
 openssl = { version = "0.10", features = ["vendored"] }
+himmelblau_kerbeiros = "0.4.1"
+ascii = "1.1.0"
+himmelblau_kerberos_crypto = "0.4.1"
+ntlm-hash = "0.1.0"
+himmelblau_kerberos_ccache = "0.4.1"
+base64 = "0.22.1"
+himmelblau_kerberos_constants = "0.4.1"
