@@ -1,6 +1,5 @@
 use clap::Args;
 use log::info;
-use winston::log;
 
 use crate::{app::App, cli::commands::Command};
 
@@ -45,7 +44,7 @@ impl Command for RemoveArgs {
                 // Remove the credential
                 match app.credential_storage().remove_credential(&full_id) {
                     Some(_) => {
-                        log!(info, "Credential removed successfully", credential_id = full_id);
+                        println!("Credential removed successfully");
                         Ok(false)
                     }
                     None => {

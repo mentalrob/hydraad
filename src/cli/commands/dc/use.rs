@@ -20,7 +20,7 @@ impl Command for UseArgs {
         
         app.set_current_dc(Some(dc));
         
-        winston::log!(info, "Done");
+        println!("Done");
         
         Ok(false)
     }

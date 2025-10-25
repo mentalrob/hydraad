@@ -1,6 +1,5 @@
 use clap::{Args, ValueEnum};
 use log::info;
-use winston::log;
 
 use crate::{app::App, cli::commands::Command, data::{credential::{AuthType, CredType}, AuthData, Credential}};
 

@@ -4,19 +4,12 @@ pub mod cli;
 pub mod stores;
 pub mod data;
 
-use winston::{format::colorize, log, transports::stdout, Logger};
 
-use crate::{app::App, utils::cli_utils::{clear_screen, print_banner}};
+use crate::app::App;
 
 #[tokio::main]
 async fn main() {
-    let logger = Logger::builder()
-        .level("info")
-        .format(colorize())
-        .transport(stdout())
-        .build();
-
-    winston::init(logger);
+    env_logger::builder().filter_level(log::LevelFilter::Trace).init();
 
     let mut app = App::new();
     app.run().await;

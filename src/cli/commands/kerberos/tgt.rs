@@ -28,8 +28,8 @@ impl Command for TgtArgs {
         let tgt_requester = TgtRequester::new(realm, kdc_address);
         let credential = tgt_requester.request(&username, Some(&user_key)).map_err(|e| e.to_string())?;
 
-        winston::log!(info, "TGT Key Retreived !");
-        winston::log!(info, "Building ccache...");
+        println!("TGT Key Retreived !");
+        println!("Building ccache...");
 
         let ccache: himmelblau_kerberos_ccache::Credential = credential.into();
 
@@ -41,7 +41,7 @@ impl Command for TgtArgs {
         new_creds.auth_data = AuthData::KerberosTicket(ccache_data);
         new_creds.source = "Tgt".to_string();
         app.credential_storage().add_credential(new_creds).map_err(|e| e.to_string())?;        
-        winston::log!(info, "New credential added to storage !");
+        println!("New credential added to storage !");
         Ok(false)
     }
 }

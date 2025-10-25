@@ -1,5 +1,4 @@
 use clap::Args;
-use winston::log;
 
 use crate::{app::App, cli::commands::Command};
 
@@ -8,7 +7,7 @@ pub struct ExitArgs;
 
 impl Command for ExitArgs {
     async fn execute(&self, app: &mut App) -> Result<bool, String> {
-        log!(info, "Exiting...");
+        println!("Exiting...");
         Ok(true)
     }
 }

@@ -4,11 +4,12 @@ mod clear;
 mod dc;
 mod creds;
 mod kerberos;
+mod smb;
 
 use std::future::Future;
 use clap::{command, Parser, Subcommand};
 
-use crate::{app::App, cli::commands::{clear::ClearArgs, creds::CredsArgs, dc::DcArgs, exit::ExitArgs, kerberos::KerberosArgs}};
+use crate::{app::App, cli::commands::{clear::ClearArgs, creds::CredsArgs, dc::DcArgs, exit::ExitArgs, kerberos::KerberosArgs, smb::SmbArgs}};
 
 macro_rules! handle_commands {
     ($command:expr, $app:expr, $($variant:ident),*) => {
@@ -36,7 +37,8 @@ impl Cli {
             Clear,
             Dc,
             Creds,
-            Kerberos
+            Kerberos,
+            Smb
         )
     }
 }
@@ -58,4 +60,6 @@ pub enum Commands {
 
     #[command(about = "Kerberos Operations")]
     Kerberos(KerberosArgs),
+    #[command(about = "Smb Operations")]
+    Smb(SmbArgs),
 }

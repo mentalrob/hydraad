@@ -2,7 +2,6 @@ use log::error;
 use reedline::{
     default_emacs_keybindings, ColumnarMenu, DefaultCompleter, Emacs, FileBackedHistory, KeyCode, KeyModifiers, MenuBuilder, Reedline, ReedlineEvent, ReedlineMenu, Signal
 };
-use winston::log;
 
 use crate::{
     cli::{command_manager::CommandManager, commands::Cli, hydraad_prompt::HydraAdPrompt},
@@ -89,7 +88,7 @@ impl App {
             ]),
         );
         let history = Box::new(
-            FileBackedHistory::with_file(5, "history.txt".into())
+            FileBackedHistory::with_file(30, "history.txt".into())
                 .expect("Error configuring history with file"),
         );
 
@@ -118,11 +117,11 @@ impl App {
                     }
                 }
                 Ok(Signal::CtrlD) | Ok(Signal::CtrlC) => {
-                    log!(error, "Aborted!");
+                    println!("Aborted!");
                     break;
                 }
                 Err(err) => {
-                    log!(error, err.to_string());
+                    println!("{}",err.to_string());
                 }
             }
         }
