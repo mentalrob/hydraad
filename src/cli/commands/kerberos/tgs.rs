@@ -71,10 +71,10 @@ mod test {
         // Initialize Kerberos security context
 
         // Set up the credentials for authentication
-        let username = "tom"; // Replace with your username
-        let password = "Abcd1234"; // Replace with your password
-        let domain = "SAMDOM.EXAMPLE.COM"; // Replace with your domain
-        let mut client = ReqwestNetworkClient::new("192.168.68.100".parse().unwrap());
+        let username = "ryan.naylor"; // Replace with your username
+        let password = "HollowOct31Nyt"; // Replace with your password
+        let domain = "dc.voleur.htb"; // Replace with your domain
+        let mut client = ReqwestNetworkClient::new("10.10.11.76".parse().unwrap());
         let config = KerberosConfig {
             kdc_url: Some(url::Url::parse(format!("tcp://{}:88", domain).as_str())?),
             client_computer_name: Some(domain.to_string()),

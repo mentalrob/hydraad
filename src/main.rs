@@ -11,7 +11,7 @@ use crate::app::App;
 
 #[tokio::main]
 async fn main() {
-    env_logger::builder().filter_level(log::LevelFilter::Trace).init();
+    // env_logger::builder().filter_level(log::LevelFilter::Trace).init();
 
     let mut app = App::new();
     app.run().await;
