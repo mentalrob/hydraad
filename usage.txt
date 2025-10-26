@@ -1,0 +1,4 @@
+dc add 10.10.11.76
+dc use voleur.htb
+creds load-file creds.json
+creds use ryan.naylor

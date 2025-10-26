@@ -68,6 +68,38 @@ impl App {
         Err("Please set a domain controller and a credential".to_string())
     }
 
+    pub async fn before_run(&mut self, file_path: &str) -> Result<bool, String> {
+        match std::fs::read_to_string(file_path) {
+            Ok(content) => {
+                println!("Executing commands from file: {}", file_path);
+                for (line_num, line) in content.lines().enumerate() {
+                    let line = line.trim();
+                    if line.is_empty() || line.starts_with('#') {
+                        continue; // Skip empty lines and comments
+                    }
+                    
+                    println!("Executing: {}", line);
+                    match crate::cli::command_manager::CommandManager::handle_command(self, line).await {
+                        Ok(should_exit) => {
+                            if should_exit {
+                                println!("Exit command encountered at line {}", line_num + 1);
+                                return Ok(true); // Should exit
+                            }
+                        }
+                        Err(e) => {
+                            return Err(format!("Error executing line {}: {}", line_num + 1, e));
+                        }
+                    }
+                }
+                println!("File execution completed. Starting interactive mode...");
+                Ok(false) // Don't exit, continue to interactive mode
+            }
+            Err(e) => {
+                Err(format!("Error reading file '{}': {}", file_path, e))
+            }
+        }
+    }
+
     pub async fn run(&mut self) {
         clear_screen();
 
