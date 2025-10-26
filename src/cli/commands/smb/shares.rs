@@ -14,6 +14,7 @@ impl Command for SharesArgs {
         let (dc, creds) = app.get_current_context()?;
         let client = Client::new(ClientConfig {
             connection: ConnectionConfig {
+                client_name: Some("SAMDOM".to_string()),
                 auth_methods: AuthMethodsConfig {
                     ntlm: false,
                     kerberos: true

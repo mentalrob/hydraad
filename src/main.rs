@@ -3,6 +3,8 @@ pub mod app;
 pub mod cli;
 pub mod stores;
 pub mod data;
+pub mod sspi_client;
+pub mod rustls;
 
 
 use crate::app::App;
