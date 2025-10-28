@@ -11,7 +11,10 @@ use smb::{
 use sspi::{AuthIdentity, Secret, Username};
 
 use crate::{
-    app::App, cli::commands::Command, data::{AuthData, DomainController}, utils::dns_operations::dig_srv_short,
+    app::App,
+    cli::commands::Command,
+    data::{AuthData, DomainController},
+    utils::dns_operations::dig_srv_short,
 };
 
 #[derive(Debug, Args)]
@@ -86,11 +89,11 @@ impl Command for SharesArgs {
 
                 println!("Available shares on the target:");
                 let shares = client
-                    .list_shares( &smb_main_path)
+                    .list_shares(&smb_main_path)
                     .await
                     .map_err(|e| e.to_string())?;
                 for share in shares.clone() {
-                        println!("  - {}", **share.netname.as_ref().unwrap());
+                    println!("  - {}", **share.netname.as_ref().unwrap());
                 }
                 if self.all {
                     for share in shares {
@@ -101,74 +104,66 @@ impl Command for SharesArgs {
                             continue;
                         }
                         let unc_path = format!(r"\\{}\{}", smb_main_path, share_name);
-                        list_recursive(&client, &unc_path, "", &identity, 1)
-                            .await?;
+                        list_recursive(&client, &unc_path, "", &format!(r"{}\{}", dc.domain_name.clone(), creds.username.clone()), &pass, 1).await?;
                     }
-                } else if let Some(ref share_name) = self.share {
-                    println!("Listing content of share: {}", share_name);
-                    let unc_path = format!(r"\\{}\{}", smb_main_path, share_name);
-                    list_recursive(&client, &unc_path, "", &identity, 0)
-                        .await?;
-                } else {
-                    println!(
-                        "Use --all to list all shares or --share <NAME> to list a single share."
-                    );
                 }
             }
 
-            if let Some(share) = &self.share {
-                let unc_path = format!(r"\\{}\{}", smb_main_path, share).parse().unwrap();
-                client
-                    .share_connect(&unc_path, &creds.username, pass.clone().into())
-                    .await
-                    .map_err(|e| e.to_string())?;
-                let resource = client
-                    .create_file(
-                        &unc_path,
-                        &FileCreateArgs::make_open_existing(
-                            FileAccessMask::new().with_generic_read(true),
-                        ),
-                    )
-                    .await
-                    .map_err(|e| e.to_string())?;
+            if let Some(ref share_name) = self.share {
+                println!("Listing content of share: {}", share_name);
+                let unc_path = format!(r"\\{}\{}", smb_main_path, share_name);
+                list_recursive(&client, &unc_path, "", &format!(r"{}\{}", dc.domain_name.clone(), creds.username.clone()), &pass, 0).await?;
             }
         }
 
         // client.ipc_connect(server, username, password)
 
-    async fn list_recursive(
-        client: &smb::Client,
-        unc_base: &str,       // e.g. \\10.10.11.76\Documents
-        path: &str,           // relative path ("" or "Subfolder")
-        creds: &AuthIdentity, // credentials (not used here, but kept for future auth reconnects)
-        depth: usize,
-    ) -> Result<(), String> {
-        // Construct full UNC path
-        let full_unc = if path.is_empty() {
-            unc_base.to_string()
-        } else {
-            format!(r"{}\{}", unc_base, path)
-        };
+        async fn list_recursive(
+            client: &smb::Client,
+            unc_base: &str,       // e.g. \\10.10.11.76\Documents
+            path: &str,           // relative path ("" or "Subfolder")
+            username_with_domain: &str, // credentials (not used here, but kept for future auth reconnects)
+            password: &str,
+            depth: usize,
+        ) -> Result<(), String> {
+            // Construct full UNC path
+            let full_unc = if path.is_empty() {
+                unc_base.to_string()
+            } else {
+                format!(r"{}\{}", unc_base, path)
+            };
 
-        // Try to open this path (folder or file)
-        match client
-            .create_file(
-                &full_unc.parse().unwrap(),
-                &FileCreateArgs::make_open_existing(FileAccessMask::new().with_generic_read(true)),
-            )
-            .await
-        {
-            Ok(_) => {
-                println!("{}📁 {}", "  ".repeat(depth), full_unc);
+
+
+            // Try to open this path (folder or file)
+            let unc_path = UncPath::from_str(&full_unc).map_err(|e| e.to_string())?;
+            client
+                .share_connect(&unc_path, username_with_domain, password.to_string())
+                .await
+                .map_err(|e| e.to_string())?;
+
+            println!("Share connected");
+
+            match client
+                .create_file(
+                    &unc_path,
+                    &FileCreateArgs::make_open_existing(
+                        FileAccessMask::new().with_generic_read(true),
+                    ),
+                )
+                .await
+            {
+                Ok(_) => {
+                    println!("{}📁 {}", "  ".repeat(depth), full_unc);
+                }
+                Err(e) => {
+                    return Err(format!("Failed to open {}: {}", full_unc, e));
+                }
             }
-            Err(e) => {
-                return Err(format!("Failed to open {}: {}", full_unc, e));
-            }
+
+            Ok(())
         }
-
-        Ok(())
-    }
-    Ok(false)
+        Ok(false)
     }
 }
 
@@ -219,13 +214,15 @@ mod test {
             format!(r"{}\{}", unc_base, path)
         };
 
-        let result =  client
+        let result = client
             .create_file(
                 &full_unc.parse().unwrap(),
-                &smb::FileCreateArgs::make_open_existing(smb::FileAccessMask::new().with_generic_read(true)),
+                &smb::FileCreateArgs::make_open_existing(
+                    smb::FileAccessMask::new().with_generic_read(true),
+                ),
             )
             .await;
-        print!(r"{}",result.is_ok());
+        print!(r"{}", result.is_ok());
         println!("Bişeyler yaşandı amk");
     }
 }
