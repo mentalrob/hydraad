@@ -26,6 +26,7 @@ himmelblau_kerberos_ccache = "0.4.1"
 base64 = "0.22.1"
 himmelblau_kerberos_constants = "0.4.1"
 smb = { git = "https://github.com/mentalrob/smb-rs.git", branch = "136-bug-cant-build-on-windows", features = ["kerberos"]}
+smb-rpc = { git = "https://github.com/mentalrob/smb-rs.git", branch = "136-bug-cant-build-on-windows", package="smb-rpc"}
 sspi = "0.18.0"
 env_logger = "0.11.8"
 byteorder = "1.5.0"

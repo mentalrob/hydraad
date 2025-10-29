@@ -5,6 +5,7 @@ pub mod stores;
 pub mod data;
 pub mod sspi_client;
 pub mod rustls;
+pub mod protocols;
 
 
 use crate::app::App;
